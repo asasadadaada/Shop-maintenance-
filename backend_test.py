@@ -285,6 +285,106 @@ class MaintenanceAPITester:
             self.log_test("Complete Task", False, str(response))
             return False
 
+    def test_get_notifications_technician(self):
+        """Test getting notifications for technician"""
+        print("\n🔔 Testing Get Notifications (Technician)...")
+        success, response = self.make_request(
+            'GET', 'notifications', 
+            token=self.tech_token
+        )
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Notifications (Technician)", True)
+            print(f"   Found {len(response)} notifications")
+            for notif in response[:3]:  # Show first 3
+                print(f"   - {notif.get('type', 'unknown')}: {notif.get('message', 'no message')[:50]}...")
+            return True, response
+        else:
+            self.log_test("Get Notifications (Technician)", False, str(response))
+            return False, []
+
+    def test_get_notifications_admin(self):
+        """Test getting notifications for admin"""
+        print("\n🔔 Testing Get Notifications (Admin)...")
+        success, response = self.make_request(
+            'GET', 'notifications', 
+            token=self.admin_token
+        )
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Notifications (Admin)", True)
+            print(f"   Found {len(response)} notifications")
+            for notif in response[:3]:  # Show first 3
+                print(f"   - {notif.get('type', 'unknown')}: {notif.get('message', 'no message')[:50]}...")
+            return True, response
+        else:
+            self.log_test("Get Notifications (Admin)", False, str(response))
+            return False, []
+
+    def test_unread_notifications_count_technician(self):
+        """Test getting unread notifications count for technician"""
+        print("\n📊 Testing Unread Notifications Count (Technician)...")
+        success, response = self.make_request(
+            'GET', 'notifications/unread/count', 
+            token=self.tech_token
+        )
+        
+        if success and isinstance(response, dict) and 'count' in response:
+            self.log_test("Unread Notifications Count (Technician)", True)
+            print(f"   Unread count: {response['count']}")
+            return True, response['count']
+        else:
+            self.log_test("Unread Notifications Count (Technician)", False, str(response))
+            return False, 0
+
+    def test_unread_notifications_count_admin(self):
+        """Test getting unread notifications count for admin"""
+        print("\n📊 Testing Unread Notifications Count (Admin)...")
+        success, response = self.make_request(
+            'GET', 'notifications/unread/count', 
+            token=self.admin_token
+        )
+        
+        if success and isinstance(response, dict) and 'count' in response:
+            self.log_test("Unread Notifications Count (Admin)", True)
+            print(f"   Unread count: {response['count']}")
+            return True, response['count']
+        else:
+            self.log_test("Unread Notifications Count (Admin)", False, str(response))
+            return False, 0
+
+    def test_mark_notification_read(self, notifications):
+        """Test marking a notification as read"""
+        if not notifications:
+            self.log_test("Mark Notification Read", False, "No notifications available")
+            return False
+            
+        # Find an unread notification
+        unread_notif = None
+        for notif in notifications:
+            if not notif.get('read', True):
+                unread_notif = notif
+                break
+                
+        if not unread_notif:
+            print("\n📖 No unread notifications found to test marking as read")
+            self.log_test("Mark Notification Read", True, "No unread notifications to test")
+            return True
+            
+        print(f"\n📖 Testing Mark Notification Read (ID: {unread_notif['id']})...")
+        success, response = self.make_request(
+            'PATCH', f'notifications/{unread_notif["id"]}/read', 
+            token=self.tech_token
+        )
+        
+        if success:
+            self.log_test("Mark Notification Read", True)
+            print(f"   Response: {response}")
+            return True
+        else:
+            self.log_test("Mark Notification Read", False, str(response))
+            return False
+
     def test_get_task_locations(self):
         """Test getting task locations (admin only)"""
         if not self.test_task_id:
