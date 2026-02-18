@@ -461,7 +461,13 @@ const AdminDashboard = ({ user, onLogout }) => {
       {selectedTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="location-modal">
           <div className="card max-w-4xl w-full">
-            <h2 className="text-2xl font-bold mb-4">موقع الموظف - {selectedTask.customer_name}</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold" style={{ color: '#667eea' }}>موقع الموظف - {selectedTask.customer_name}</h2>
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-700 font-medium">مباشر</span>
+              </div>
+            </div>
             {locations.length > 0 ? (
               <div>
                 <div className="map-container mb-4">
@@ -471,21 +477,32 @@ const AdminDashboard = ({ user, onLogout }) => {
                     height="400"
                     frameBorder="0"
                     src={`https://www.openstreetmap.org/export/embed.html?bbox=${locations[0].longitude - 0.01},${locations[0].latitude - 0.01},${locations[0].longitude + 0.01},${locations[0].latitude + 0.01}&layer=mapnik&marker=${locations[0].latitude},${locations[0].longitude}`}
+                    key={locations[0].timestamp}
                   />
                 </div>
-                <p className="text-gray-600" data-testid="location-info">
-                  آخر تحديث: {new Date(locations[0].timestamp).toLocaleString('ar-IQ')}
-                </p>
-                <p className="text-gray-600">
-                  الإحداثيات: {locations[0].latitude.toFixed(6)}, {locations[0].longitude.toFixed(6)}
-                </p>
+                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                  <p className="text-gray-700 font-medium mb-2" data-testid="location-info">
+                    📍 آخر تحديث: {new Date(locations[0].timestamp).toLocaleString('ar-IQ')}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    الإحداثيات: {locations[0].latitude.toFixed(6)}, {locations[0].longitude.toFixed(6)}
+                  </p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    عدد التحديثات: {locations.length}
+                  </p>
+                </div>
               </div>
             ) : (
-              <p className="text-gray-600">لا توجد بيانات موقع متاحة</p>
+              <p className="text-gray-600 text-center py-8">لا توجد بيانات موقع متاحة</p>
             )}
             <button
-              onClick={() => setSelectedTask(null)}
-              className="secondary-button mt-4"
+              onClick={() => {
+                if (selectedTask.locationInterval) {
+                  clearInterval(selectedTask.locationInterval);
+                }
+                setSelectedTask(null);
+              }}
+              className="secondary-button w-full"
               data-testid="close-location-button"
             >
               إغلاق
