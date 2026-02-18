@@ -345,6 +345,139 @@ const AdminDashboard = ({ user, onLogout }) => {
         </button>
       </div>
 
+      {/* Add Technician Modal */}
+      {showAddTechnician && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#667eea' }}>إضافة موظف جديد</h2>
+            <form onSubmit={handleAddTechnician} className="space-y-4">
+              <div>
+                <label className="label">الاسم الكامل</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={newTechnician.name}
+                  onChange={(e) => setNewTechnician({ ...newTechnician, name: e.target.value })}
+                  required
+                  placeholder="أحمد محمد"
+                />
+              </div>
+
+              <div>
+                <label className="label">البريد الإلكتروني (اليوزر)</label>
+                <input
+                  type="email"
+                  className="input-field"
+                  value={newTechnician.email}
+                  onChange={(e) => setNewTechnician({ ...newTechnician, email: e.target.value })}
+                  required
+                  placeholder="ahmed@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="label">كلمة المرور</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={newTechnician.password}
+                  onChange={(e) => setNewTechnician({ ...newTechnician, password: e.target.value })}
+                  required
+                  placeholder="اكتب كلمة مرور قوية"
+                />
+                <p className="text-xs text-gray-500 mt-1">⚠️ احفظ كلمة المرور وأرسلها للموظف</p>
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium">📋 بيانات الدخول:</p>
+                <p className="text-xs text-blue-600 mt-1">اليوزر: {newTechnician.email || "..."}</p>
+                <p className="text-xs text-blue-600">الباسورد: {newTechnician.password || "..."}</p>
+              </div>
+
+              <div className="flex gap-4">
+                <button type="submit" className="success-button flex-1">
+                  إضافة الموظف
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddTechnician(false);
+                    setNewTechnician({ name: "", email: "", password: "" });
+                  }}
+                  className="secondary-button flex-1"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Technicians Management Modal */}
+      {showTechniciansModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold" style={{ color: '#667eea' }}>
+                إدارة الموظفين ({technicians.length})
+              </h2>
+              <button onClick={() => setShowTechniciansModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            {technicians.length === 0 ? (
+              <div className="text-center py-12">
+                <Users size={64} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">لا يوجد موظفين</p>
+                <button
+                  onClick={() => {
+                    setShowTechniciansModal(false);
+                    setShowAddTechnician(true);
+                  }}
+                  className="primary-button mt-4"
+                >
+                  <UserPlus className="inline ml-2" size={18} />
+                  إضافة أول موظف
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {technicians.map((tech) => (
+                  <div key={tech.id} className="card bg-gray-50">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                          {tech.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg">{tech.name}</h3>
+                          <p className="text-sm text-gray-600">{tech.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                      <div className="text-xs text-gray-500">
+                        <p>انضم: {new Date(tech.created_at).toLocaleDateString('ar-IQ')}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTechnician(tech.id)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        <Trash2 size={16} className="inline ml-1" />
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Create Task Modal */}
       {showCreateTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="create-task-modal">
