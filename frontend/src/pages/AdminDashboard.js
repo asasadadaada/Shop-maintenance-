@@ -524,56 +524,123 @@ const AdminDashboard = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Location Modal */}
+      {/* Location Modal - Live Tracking */}
       {selectedTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="location-modal">
-          <div className="card max-w-4xl w-full">
+          <div className="card max-w-6xl w-full">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold" style={{ color: '#667eea' }}>موقع الموظف - {selectedTask.customer_name}</h2>
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-700 font-medium">مباشر</span>
+              <h2 className="text-2xl font-bold" style={{ color: '#667eea' }}>
+                📍 تتبع مباشر - {selectedTask.customer_name}
+              </h2>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full shadow-sm">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-700 font-bold">مباشر • تحديث تلقائي</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (selectedTask.locationInterval) {
+                      clearInterval(selectedTask.locationInterval);
+                    }
+                    setSelectedTask(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={28} />
+                </button>
               </div>
             </div>
             {locations.length > 0 ? (
               <div>
-                <div className="map-container mb-4">
+                {/* Map with Path */}
+                <div className="map-container mb-4 relative" style={{ height: '500px' }}>
                   <iframe
                     title="map"
                     width="100%"
-                    height="400"
+                    height="500"
                     frameBorder="0"
                     src={`https://www.openstreetmap.org/export/embed.html?bbox=${locations[0].longitude - 0.01},${locations[0].latitude - 0.01},${locations[0].longitude + 0.01},${locations[0].latitude + 0.01}&layer=mapnik&marker=${locations[0].latitude},${locations[0].longitude}`}
                     key={locations[0].timestamp}
                   />
+                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MapPin size={20} className="text-blue-600" />
+                      <span className="font-bold text-gray-800">الموقع الحالي</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {locations[0].latitude.toFixed(6)}, {locations[0].longitude.toFixed(6)}
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                  <p className="text-gray-700 font-medium mb-2" data-testid="location-info">
-                    📍 آخر تحديث: {new Date(locations[0].timestamp).toLocaleString('ar-IQ')}
-                  </p>
-                  <p className="text-gray-600 text-sm">
-                    الإحداثيات: {locations[0].latitude.toFixed(6)}, {locations[0].longitude.toFixed(6)}
-                  </p>
-                  <p className="text-gray-600 text-sm mt-1">
-                    عدد التحديثات: {locations.length}
-                  </p>
+                
+                {/* Location Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="bg-blue-50 p-4 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock size={20} className="text-blue-600" />
+                      <h3 className="font-bold text-blue-800">آخر تحديث</h3>
+                    </div>
+                    <p className="text-gray-700 font-medium">
+                      {new Date(locations[0].timestamp).toLocaleString('ar-IQ', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(locations[0].timestamp).toLocaleDateString('ar-IQ')}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-green-50 p-4 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MapPin size={20} className="text-green-600" />
+                      <h3 className="font-bold text-green-800">عدد التحديثات</h3>
+                    </div>
+                    <p className="text-3xl font-bold text-green-700">{locations.length}</p>
+                    <p className="text-xs text-gray-500 mt-1">نقطة GPS</p>
+                  </div>
+                  
+                  <div className="bg-purple-50 p-4 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Play size={20} className="text-purple-600" />
+                      <h3 className="font-bold text-purple-800">الحالة</h3>
+                    </div>
+                    <p className="text-lg font-bold text-purple-700">قيد التنفيذ</p>
+                    <p className="text-xs text-gray-500 mt-1">الموظف في الطريق</p>
+                  </div>
                 </div>
+                
+                {/* Location History Timeline */}
+                {locations.length > 1 && (
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <Clock size={18} />
+                      سجل الحركة ({locations.length} موقع)
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {locations.slice(0, 10).map((loc, index) => (
+                        <div key={loc.id} className="flex items-center gap-3 text-sm">
+                          <div className={`w-2 h-2 rounded-full ${index === 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                          <span className="text-gray-600 font-mono text-xs">
+                            {new Date(loc.timestamp).toLocaleTimeString('ar-IQ')}
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-gray-600 text-center py-8">لا توجد بيانات موقع متاحة</p>
+              <div className="text-center py-16">
+                <MapPin size={64} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">لا توجد بيانات موقع متاحة</p>
+                <p className="text-gray-400 text-sm mt-2">سيتم عرض الموقع عند بدء الموظف بالتحرك</p>
+              </div>
             )}
-            <button
-              onClick={() => {
-                if (selectedTask.locationInterval) {
-                  clearInterval(selectedTask.locationInterval);
-                }
-                setSelectedTask(null);
-              }}
-              className="secondary-button w-full"
-              data-testid="close-location-button"
-            >
-              إغلاق
-            </button>
           </div>
         </div>
       )}
