@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2, Play } from "lucide-react";
+import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2, Play, UserPlus } from "lucide-react";
 import { playNotificationSound } from "../utils/notificationSound";
+import LiveMap from "../components/LiveMap";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -20,6 +21,13 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [modalTasksType, setModalTasksType] = useState("");
   const [modalTasks, setModalTasks] = useState([]);
+  const [showAddTechnician, setShowAddTechnician] = useState(false);
+  const [showTechniciansModal, setShowTechniciansModal] = useState(false);
+  const [newTechnician, setNewTechnician] = useState({
+    name: "",
+    email: "",
+    password: ""
+  });
   const [newTask, setNewTask] = useState({
     customer_name: "",
     customer_phone: "",
@@ -125,6 +133,31 @@ const AdminDashboard = ({ user, onLogout }) => {
         fetchData();
       } catch (error) {
         toast.error("فشل حذف المهمة");
+      }
+    }
+  };
+
+  const handleAddTechnician = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/technicians`, newTechnician, getAuthHeaders());
+      toast.success("تم إضافة الموظف بنجاح");
+      setShowAddTechnician(false);
+      setNewTechnician({ name: "", email: "", password: "" });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "فشل إضافة الموظف");
+    }
+  };
+
+  const handleDeleteTechnician = async (techId) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
+      try {
+        await axios.delete(`${API}/technicians/${techId}`, getAuthHeaders());
+        toast.success("تم حذف الموظف بنجاح");
+        fetchData();
+      } catch (error) {
+        toast.error(error.response?.data?.detail || "فشل حذف الموظف");
       }
     }
   };
