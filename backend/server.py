@@ -80,6 +80,7 @@ class Task(BaseModel):
     completed_at: Optional[str] = None
     report: Optional[str] = None
     report_images: Optional[List[str]] = None
+    success: Optional[bool] = True  # True = completed successfully, False = failed
 
 class LocationUpdate(BaseModel):
     task_id: str
@@ -99,6 +100,7 @@ class TaskReport(BaseModel):
     task_id: str
     report_text: str
     images: Optional[List[str]] = None
+    success: Optional[bool] = True
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -231,7 +233,8 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
         "accepted_at": None,
         "completed_at": None,
         "report": None,
-        "report_images": None
+        "report_images": None,
+        "success": True
     }
     
     await db.tasks.insert_one(task_doc)
@@ -333,16 +336,18 @@ async def complete_task(task_id: str, report_data: TaskReport, current_user: dic
             "status": "completed",
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "report": report_data.report_text,
-            "report_images": report_data.images
+            "report_images": report_data.images,
+            "success": report_data.success
         }}
     )
     
     # Create notification for admin
+    status_text = "بنجاح" if report_data.success else "كغير مكتملة"
     notification_doc = {
         "id": str(uuid.uuid4()),
         "user_id": task["created_by"],
         "task_id": task_id,
-        "message": f"أنهى {current_user['name']} المهمة: {task['customer_name']}",
+        "message": f"أنهى {current_user['name']} المهمة {status_text}: {task['customer_name']}",
         "type": "task_completed",
         "read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
