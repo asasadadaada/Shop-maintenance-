@@ -447,9 +447,26 @@ const AdminDashboard = ({ user, onLogout }) => {
               )}
 
               {task.report && (
-                <div className="mt-4 p-4 bg-green-50 rounded-lg" data-testid={`task-report-${task.id}`}>
-                  <h4 className="font-bold mb-2 text-green-800">التقرير النهائي:</h4>
-                  <p className="text-gray-700">{task.report}</p>
+                <div 
+                  className={`mt-4 p-4 rounded-lg ${task.success !== false ? 'bg-green-50' : 'bg-red-50'}`}
+                  data-testid={`task-report-${task.id}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    {task.success !== false ? (
+                      <>
+                        <CheckCircle size={20} className="text-green-600" />
+                        <h4 className="font-bold text-green-800">✓ المهمة تمت بنجاح</h4>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-red-600 text-xl">✗</span>
+                        <h4 className="font-bold text-red-800">✗ المهمة لم تكتمل</h4>
+                      </>
+                    )}
+                  </div>
+                  <p className={`${task.success !== false ? 'text-gray-700' : 'text-red-700'}`}>
+                    {task.report}
+                  </p>
                 </div>
               )}
             </div>
