@@ -100,6 +100,16 @@ class TaskReport(BaseModel):
     report_text: str
     images: Optional[List[str]] = None
 
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    task_id: str
+    message: str
+    type: str  # task_assigned, task_accepted, task_completed
+    read: bool
+    created_at: str
+
 class TokenResponse(BaseModel):
     token: str
     user: User
@@ -225,6 +235,20 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
     }
     
     await db.tasks.insert_one(task_doc)
+    
+    # Create notification for assigned technician
+    if task_data.assigned_to:
+        notification_doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": task_data.assigned_to,
+            "task_id": task_id,
+            "message": f"تم تعيين مهمة جديدة لك: {task_data.customer_name}",
+            "type": "task_assigned",
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
     return Task(**task_doc)
 
 @api_router.get("/tasks", response_model=List[Task])
@@ -264,6 +288,18 @@ async def accept_task(task_id: str, current_user: dict = Depends(get_current_use
         }}
     )
     
+    # Create notification for admin
+    notification_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": task["created_by"],
+        "task_id": task_id,
+        "message": f"قبل {current_user['name']} المهمة: {task['customer_name']}",
+        "type": "task_accepted",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    
     return {"message": "تم قبول المهمة"}
 
 @api_router.patch("/tasks/{task_id}/start")
@@ -300,6 +336,18 @@ async def complete_task(task_id: str, report_data: TaskReport, current_user: dic
             "report_images": report_data.images
         }}
     )
+    
+    # Create notification for admin
+    notification_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": task["created_by"],
+        "task_id": task_id,
+        "message": f"أنهى {current_user['name']} المهمة: {task['customer_name']}",
+        "type": "task_completed",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
     
     return {"message": "تم إنهاء المهمة بنجاح"}
 
@@ -345,6 +393,30 @@ async def get_technicians(current_user: dict = Depends(get_current_user)):
     
     technicians = await db.users.find({"role": "technician"}, {"_id": 0, "password": 0}).to_list(1000)
     return technicians
+
+# Notifications Routes
+@api_router.get("/notifications", response_model=List[Notification])
+async def get_notifications(current_user: dict = Depends(get_current_user)):
+    notifications = await db.notifications.find(
+        {"user_id": current_user["id"]}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return notifications
+
+@api_router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
+    await db.notifications.update_one(
+        {"id": notification_id, "user_id": current_user["id"]},
+        {"$set": {"read": True}}
+    )
+    return {"message": "تم تحديث الإشعار"}
+
+@api_router.get("/notifications/unread/count")
+async def get_unread_count(current_user: dict = Depends(get_current_user)):
+    count = await db.notifications.count_documents(
+        {"user_id": current_user["id"], "read": False}
+    )
+    return {"count": count}
 
 # Statistics
 @api_router.get("/stats")
