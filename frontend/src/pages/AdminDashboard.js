@@ -76,9 +76,17 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
+    
+    // التحقق من اختيار موظف
+    if (!newTask.assigned_to) {
+      toast.error("⚠️ يرجى اختيار موظف لتعيين المهمة له");
+      return;
+    }
+    
     try {
       await axios.post(`${API}/tasks`, newTask, getAuthHeaders());
-      toast.success("تم إنشاء المهمة بنجاح");
+      const assignedTech = technicians.find(t => t.id === newTask.assigned_to);
+      toast.success(`✓ تم إنشاء المهمة وإرسالها إلى ${assignedTech?.name || 'الموظف'}`);
       setShowCreateTask(false);
       setNewTask({
         customer_name: "",
@@ -533,20 +541,29 @@ const AdminDashboard = ({ user, onLogout }) => {
               </div>
 
               <div>
-                <label className="label">تعيين لموظف</label>
+                <label className="label">تعيين لموظف *</label>
                 <select
                   className="input-field"
                   value={newTask.assigned_to}
                   onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+                  required
                   data-testid="assigned-to-select"
                 >
-                  <option value="">اختر موظف...</option>
+                  <option value="">-- اختر الموظف --</option>
                   {technicians.map((tech) => (
                     <option key={tech.id} value={tech.id}>
-                      {tech.name}
+                      {tech.name} ({tech.email})
                     </option>
                   ))}
                 </select>
+                {technicians.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    ⚠️ لا يوجد موظفين! يرجى إضافة موظف أولاً
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  * المهمة ستُرسل مباشرة للموظف المختار
+                </p>
               </div>
 
               <div className="flex gap-4">
