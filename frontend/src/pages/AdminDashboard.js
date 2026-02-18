@@ -724,25 +724,12 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
             {locations.length > 0 ? (
               <div>
-                {/* Map with Path */}
-                <div className="map-container mb-4 relative" style={{ height: '500px' }}>
-                  <iframe
-                    title="map"
-                    width="100%"
-                    height="500"
-                    frameBorder="0"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${locations[0].longitude - 0.01},${locations[0].latitude - 0.01},${locations[0].longitude + 0.01},${locations[0].latitude + 0.01}&layer=mapnik&marker=${locations[0].latitude},${locations[0].longitude}`}
-                    key={locations[0].timestamp}
+                {/* Live Map Component */}
+                <div style={{ height: '500px' }} className="mb-4">
+                  <LiveMap 
+                    locations={locations} 
+                    technicianName={selectedTask.assigned_to_name || "الموظف"}
                   />
-                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin size={20} className="text-blue-600" />
-                      <span className="font-bold text-gray-800">الموقع الحالي</span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      {locations[0].latitude.toFixed(6)}, {locations[0].longitude.toFixed(6)}
-                    </p>
-                  </div>
                 </div>
                 
                 {/* Location Details Grid */}
