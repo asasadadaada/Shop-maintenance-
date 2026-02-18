@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut } from "lucide-react";
+import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -13,6 +13,12 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [locations, setLocations] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showTasksModal, setShowTasksModal] = useState(false);
+  const [modalTasksType, setModalTasksType] = useState("");
+  const [modalTasks, setModalTasks] = useState([]);
   const [newTask, setNewTask] = useState({
     customer_name: "",
     customer_phone: "",
@@ -34,14 +40,18 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const fetchData = async () => {
     try {
-      const [tasksRes, techsRes, statsRes] = await Promise.all([
+      const [tasksRes, techsRes, statsRes, notifRes, unreadRes] = await Promise.all([
         axios.get(`${API}/tasks`, getAuthHeaders()),
         axios.get(`${API}/technicians`, getAuthHeaders()),
-        axios.get(`${API}/stats`, getAuthHeaders())
+        axios.get(`${API}/stats`, getAuthHeaders()),
+        axios.get(`${API}/notifications`, getAuthHeaders()),
+        axios.get(`${API}/notifications/unread/count`, getAuthHeaders())
       ]);
       setTasks(tasksRes.data);
       setTechnicians(techsRes.data);
       setStats(statsRes.data);
+      setNotifications(notifRes.data);
+      setUnreadCount(unreadRes.data.count);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -76,6 +86,27 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const markNotificationRead = async (notificationId) => {
+    try {
+      await axios.patch(`${API}/notifications/${notificationId}/read`, {}, getAuthHeaders());
+      fetchData();
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const showTasksByStatus = (status, title) => {
+    let filteredTasks = [];
+    if (status === "all") {
+      filteredTasks = tasks;
+    } else {
+      filteredTasks = tasks.filter(task => task.status === status);
+    }
+    setModalTasks(filteredTasks);
+    setModalTasksType(title);
+    setShowTasksModal(true);
+  };
+
   const getStatusText = (status) => {
     const statusMap = {
       pending: "قيد الانتظار",
@@ -95,17 +126,72 @@ const AdminDashboard = ({ user, onLogout }) => {
             <h1 className="text-4xl font-bold mb-2" style={{ color: '#667eea' }}>لوحة تحكم المدير</h1>
             <p className="text-gray-600">مرحباً، {user.name}</p>
           </div>
-          <button onClick={onLogout} className="secondary-button" data-testid="logout-button">
-            <LogOut className="inline ml-2" size={20} />
-            تسجيل الخروج
-          </button>
+          <div className="flex gap-3">
+            {/* Notifications Button */}
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)} 
+              className="secondary-button relative"
+              data-testid="notifications-button"
+            >
+              <Bell className="inline ml-2" size={20} />
+              الإشعارات
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button onClick={onLogout} className="secondary-button" data-testid="logout-button">
+              <LogOut className="inline ml-2" size={20} />
+              تسجيل الخروج
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Notifications Dropdown */}
+      {showNotifications && (
+        <div className="max-w-7xl mx-auto mb-6" data-testid="notifications-panel">
+          <div className="card" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">الإشعارات</h3>
+              <button onClick={() => setShowNotifications(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            {notifications.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">لا توجد إشعارات</p>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notif) => (
+                  <div 
+                    key={notif.id} 
+                    className={`p-3 rounded-lg cursor-pointer ${
+                      notif.read ? 'bg-gray-100' : 'bg-blue-50'
+                    }`}
+                    onClick={() => markNotificationRead(notif.id)}
+                    data-testid={`notification-${notif.id}`}
+                  >
+                    <p className="font-medium">{notif.message}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(notif.created_at).toLocaleString('ar-IQ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       {stats && (
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="stat-card" data-testid="stat-total-tasks">
+          <div 
+            className="stat-card cursor-pointer hover:scale-105 transition-transform"
+            onClick={() => showTasksByStatus("all", "إجمالي المهام")}
+            data-testid="stat-total-tasks"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-sm mb-1">إجمالي المهام</p>
@@ -115,7 +201,12 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           </div>
 
-          <div className="card" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white' }} data-testid="stat-pending-tasks">
+          <div 
+            className="card cursor-pointer hover:scale-105 transition-transform" 
+            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white' }}
+            onClick={() => showTasksByStatus("pending", "المهام قيد الانتظار")}
+            data-testid="stat-pending-tasks"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-sm mb-1">قيد الانتظار</p>
@@ -125,7 +216,12 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           </div>
 
-          <div className="card" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white' }} data-testid="stat-in-progress-tasks">
+          <div 
+            className="card cursor-pointer hover:scale-105 transition-transform" 
+            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white' }}
+            onClick={() => showTasksByStatus("in_progress", "المهام قيد التنفيذ")}
+            data-testid="stat-in-progress-tasks"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-sm mb-1">قيد التنفيذ</p>
@@ -135,7 +231,12 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           </div>
 
-          <div className="card" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white' }} data-testid="stat-completed-tasks">
+          <div 
+            className="card cursor-pointer hover:scale-105 transition-transform" 
+            style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white' }}
+            onClick={() => showTasksByStatus("completed", "المهام المكتملة")}
+            data-testid="stat-completed-tasks"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-sm mb-1">مكتملة</p>
@@ -244,6 +345,46 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tasks Details Modal */}
+      {showTasksModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="tasks-details-modal">
+          <div className="card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold" style={{ color: '#667eea' }}>{modalTasksType}</h2>
+              <button onClick={() => setShowTasksModal(false)} data-testid="close-tasks-modal">
+                <X size={24} />
+              </button>
+            </div>
+            {modalTasks.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">لا توجد مهام</p>
+            ) : (
+              <div className="space-y-4">
+                {modalTasks.map((task) => (
+                  <div key={task.id} className="card bg-gray-50" data-testid={`modal-task-${task.id}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold mb-2">{task.customer_name}</h3>
+                        <div className="space-y-1 text-gray-600 text-sm">
+                          <p><strong>الهاتف:</strong> {task.customer_phone}</p>
+                          <p><strong>العنوان:</strong> {task.customer_address}</p>
+                          <p><strong>العطل:</strong> {task.issue_description}</p>
+                          {task.assigned_to_name && (
+                            <p><strong>الموظف:</strong> {task.assigned_to_name}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`status-badge status-${task.status}`}>
+                        {getStatusText(task.status)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
