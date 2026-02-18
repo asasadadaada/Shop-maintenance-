@@ -13,6 +13,7 @@ const TechnicianDashboard = ({ user, onLogout }) => {
   const [locationTracking, setLocationTracking] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [report, setReport] = useState("");
+  const [taskSuccess, setTaskSuccess] = useState(true); // true = success, false = failed
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -115,38 +116,47 @@ const TechnicianDashboard = ({ user, onLogout }) => {
   };
 
   const handleAcceptTask = async (task) => {
-    // Request location permission
-    if (navigator.geolocation) {
-      const permissionGranted = await new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          () => {
-            toast.success("تم السماح بالوصول للموقع");
-            resolve(true);
-          },
-          (error) => {
-            if (error.code === error.PERMISSION_DENIED) {
-              toast.error("تم رفض الوصول للموقع. يرجى السماح بالوصول للموقع لتتبع المهمة.");
-              resolve(false);
-            } else {
-              toast.error("فشل الحصول على الموقع");
-              resolve(false);
-            }
-          },
-          { enableHighAccuracy: true }
-        );
-      });
-
-      if (!permissionGranted) {
-        return;
-      }
-    } else {
+    // Request location permission with better message
+    if (!navigator.geolocation) {
       toast.error("المتصفح لا يدعم تحديد الموقع");
+      return;
+    }
+
+    // Show permission request dialog
+    const permissionGranted = await new Promise((resolve) => {
+      toast.info("يرجى السماح بالوصول للموقع لتتبع المهمة بشكل دقيق");
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          toast.success("✓ تم السماح بالوصول للموقع - سيتم تتبع موقعك تلقائياً");
+          resolve(true);
+        },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            toast.error("⚠️ تم رفض الوصول للموقع! يجب السماح بالموقع لإكمال المهمة.\n\nالرجاء:\n1. الضغط على أيقونة القفل/الموقع في المتصفح\n2. اختيار 'السماح' للموقع", {
+              duration: 8000
+            });
+            resolve(false);
+          } else {
+            toast.error("فشل الحصول على الموقع. تأكد من تفعيل GPS");
+            resolve(false);
+          }
+        },
+        { 
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    });
+
+    if (!permissionGranted) {
       return;
     }
 
     try {
       await axios.patch(`${API}/tasks/${task.id}/accept`, {}, getAuthHeaders());
-      toast.success("تم قبول المهمة");
+      toast.success("تم قبول المهمة بنجاح");
       fetchData();
     } catch (error) {
       toast.error("فشل قبول المهمة");
@@ -174,14 +184,20 @@ const TechnicianDashboard = ({ user, onLogout }) => {
     try {
       await axios.post(
         `${API}/tasks/${activeTask.id}/complete`,
-        { task_id: activeTask.id, report_text: report, images: [] },
+        { 
+          task_id: activeTask.id, 
+          report_text: report, 
+          images: [],
+          success: taskSuccess 
+        },
         getAuthHeaders()
       );
-      toast.success("تم إنهاء المهمة بنجاح");
+      toast.success(taskSuccess ? "✓ تم إنهاء المهمة بنجاح" : "⚠️ تم تسجيل المهمة كغير مكتملة");
       setActiveTask(null);
       setLocationTracking(false);
       setShowReportModal(false);
       setReport("");
+      setTaskSuccess(true);
       fetchData();
     } catch (error) {
       toast.error("فشل إنهاء المهمة");
