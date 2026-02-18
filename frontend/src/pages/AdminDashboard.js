@@ -491,7 +491,27 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="create-task-modal">
           <div className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6" style={{ color: '#667eea' }}>إنشاء مهمة جديدة</h2>
-            <form onSubmit={handleCreateTask} className="space-y-4">
+            
+            {technicians.length === 0 ? (
+              <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-6">
+                <div className="text-center">
+                  <p className="text-yellow-800 font-bold text-lg mb-2">⚠️ لا يوجد موظفين متاحين</p>
+                  <p className="text-yellow-700 text-sm mb-4">يجب إضافة موظف أولاً قبل إنشاء المهام</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateTask(false);
+                      setShowAddTechnician(true);
+                    }}
+                    className="success-button"
+                  >
+                    <UserPlus className="inline ml-2" size={18} />
+                    إضافة موظف جديد
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateTask} className="space-y-4">
               <div>
                 <label className="label">اسم المشترك</label>
                 <input
@@ -568,7 +588,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
               <div className="flex gap-4">
                 <button type="submit" className="success-button flex-1" data-testid="submit-task-button">
-                  إنشاء المهمة
+                  ✓ إنشاء المهمة وإرسالها
                 </button>
                 <button
                   type="button"
@@ -580,6 +600,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
