@@ -89,6 +89,19 @@ const AdminDashboard = ({ user, onLogout }) => {
       const response = await axios.get(`${API}/locations/${task.id}`, getAuthHeaders());
       setLocations(response.data);
       setSelectedTask(task);
+      
+      // Auto-refresh location every 10 seconds when modal is open
+      const locationInterval = setInterval(async () => {
+        try {
+          const updatedResponse = await axios.get(`${API}/locations/${task.id}`, getAuthHeaders());
+          setLocations(updatedResponse.data);
+        } catch (error) {
+          console.error("Error updating location:", error);
+        }
+      }, 10000);
+      
+      // Store interval ID to clear it when modal closes
+      setSelectedTask({ ...task, locationInterval });
     } catch (error) {
       toast.error("فشل جلب الموقع");
     }
