@@ -6,12 +6,9 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Login = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
-    password: "",
-    role: "admin"
+    password: ""
   });
   const [loading, setLoading] = useState(false);
 
@@ -20,13 +17,12 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const response = await axios.post(`${API}${endpoint}`, formData);
+      const response = await axios.post(`${API}/auth/login`, formData);
       
-      toast.success(isLogin ? "تم تسجيل الدخول بنجاح" : "تم إنشاء الحساب بنجاح");
+      toast.success("تم تسجيل الدخول بنجاح");
       onLogin(response.data.token, response.data.user);
     } catch (error) {
-      toast.error(error.response?.data?.detail || "حدث خطأ، حاول مرة أخرى");
+      toast.error(error.response?.data?.detail || "خطأ في تسجيل الدخول");
     } finally {
       setLoading(false);
     }
@@ -37,26 +33,12 @@ const Login = ({ onLogin }) => {
       <div className="card max-w-md w-full" data-testid="login-page">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2" style={{ color: '#667eea' }}>
-            {isLogin ? "تسجيل الدخول" : "إنشاء حساب جديد"}
+            تسجيل الدخول
           </h1>
           <p className="text-gray-600">نظام إدارة الصيانة</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4" data-testid="login-form">
-          {!isLogin && (
-            <div>
-              <label className="label">الاسم</label>
-              <input
-                type="text"
-                className="input-field"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                data-testid="name-input"
-              />
-            </div>
-          )}
-
           <div>
             <label className="label">البريد الإلكتروني</label>
             <input
@@ -66,11 +48,12 @@ const Login = ({ onLogin }) => {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
               data-testid="email-input"
+              placeholder="example@email.com"
             />
           </div>
 
           <div>
-            <label className="label">كلمة السر</label>
+            <label className="label">الرمز السري</label>
             <input
               type="password"
               className="input-field"
@@ -78,23 +61,9 @@ const Login = ({ onLogin }) => {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
               data-testid="password-input"
+              placeholder="••••••"
             />
           </div>
-
-          {!isLogin && (
-            <div>
-              <label className="label">الدور</label>
-              <select
-                className="input-field"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                data-testid="role-select"
-              >
-                <option value="admin">مدير</option>
-                <option value="technician">موظف صيانة</option>
-              </select>
-            </div>
-          )}
 
           <button
             type="submit"
@@ -102,18 +71,17 @@ const Login = ({ onLogin }) => {
             disabled={loading}
             data-testid="submit-button"
           >
-            {loading ? "جاري المعالجة..." : isLogin ? "تسجيل الدخول" : "إنشاء الحساب"}
+            {loading ? "جاري الدخول..." : "تسجيل الدخول"}
           </button>
         </form>
 
-        <div className="text-center mt-6">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-gray-600 hover:text-gray-900"
-            data-testid="toggle-form-button"
-          >
-            {isLogin ? "ليس لديك حساب؟ إنشاء حساب جديد" : "لديك حساب؟ تسجيل الدخول"}
-          </button>
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-800 text-center">
+            💡 <strong>للمدير:</strong> baqer@gmail.com
+          </p>
+          <p className="text-xs text-blue-600 text-center mt-1">
+            يمكنك تغيير الرمز من الإعدادات بعد الدخول
+          </p>
         </div>
       </div>
     </div>
