@@ -55,7 +55,7 @@ const TechnicianDashboard = ({ user, onLogout }) => {
     let intervalId;
     if (locationTracking && activeTask) {
       if (navigator.geolocation) {
-        // Continuous tracking with watchPosition
+        // Continuous tracking with watchPosition (updates every 1-2 seconds)
         watchId = navigator.geolocation.watchPosition(
           (position) => sendLocation(activeTask.id, position),
           (error) => {
@@ -65,19 +65,19 @@ const TechnicianDashboard = ({ user, onLogout }) => {
           { 
             enableHighAccuracy: true, 
             maximumAge: 0, 
-            timeout: 10000,
-            distanceFilter: 10 // Send update every 10 meters
+            timeout: 5000,
+            distanceFilter: 5 // Send update every 5 meters
           }
         );
         
-        // Additional polling every 10 seconds for better tracking
+        // Additional aggressive polling every 2 seconds for real-time tracking
         intervalId = setInterval(() => {
           navigator.geolocation.getCurrentPosition(
             (position) => sendLocation(activeTask.id, position),
             (error) => console.error("Geolocation polling error:", error),
             { enableHighAccuracy: true, maximumAge: 0 }
           );
-        }, 10000);
+        }, 2000); // Every 2 seconds
       }
     }
     return () => {

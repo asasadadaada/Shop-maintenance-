@@ -99,7 +99,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       setLocations(response.data);
       setSelectedTask(task);
       
-      // Auto-refresh location every 10 seconds when modal is open
+      // Aggressive auto-refresh location every 2 seconds when modal is open
       const locationInterval = setInterval(async () => {
         try {
           const updatedResponse = await axios.get(`${API}/locations/${task.id}`, getAuthHeaders());
@@ -107,7 +107,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (error) {
           console.error("Error updating location:", error);
         }
-      }, 10000);
+      }, 2000); // Update every 2 seconds for real-time tracking
       
       // Store interval ID to clear it when modal closes
       setSelectedTask({ ...task, locationInterval });
