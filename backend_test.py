@@ -477,22 +477,79 @@ class MaintenanceAPITester:
         
         # Admin functionality tests
         self.test_get_technicians_list()
-        self.test_create_task()
-        self.test_get_tasks_admin()
-        self.test_get_admin_stats()
         
-        # Technician functionality tests
-        self.test_get_tasks_technician()
-        self.test_accept_task()
+        # Test initial notification counts
+        print("\n🔔 NOTIFICATION SYSTEM TESTING")
+        print("-" * 40)
+        
+        # Get initial counts
+        tech_success, initial_tech_count = self.test_unread_notifications_count_technician()
+        admin_success, initial_admin_count = self.test_unread_notifications_count_admin()
+        
+        # Create task (should create notification for technician)
+        print("\n📝 STEP 1: Creating task and assigning to technician...")
+        if self.test_create_task():
+            print("   ✅ Task created - notification should be sent to technician")
+            
+            # Check technician notifications after task creation
+            tech_notif_success, tech_notifications = self.test_get_notifications_technician()
+            tech_count_success, new_tech_count = self.test_unread_notifications_count_technician()
+            
+            if new_tech_count > initial_tech_count:
+                print(f"   ✅ Technician unread count increased: {initial_tech_count} → {new_tech_count}")
+            else:
+                print(f"   ⚠️  Technician unread count unchanged: {initial_tech_count} → {new_tech_count}")
+        
+        # Accept task (should create notification for admin)
+        print("\n✅ STEP 2: Technician accepting task...")
+        if self.test_accept_task():
+            print("   ✅ Task accepted - notification should be sent to admin")
+            
+            # Check admin notifications after task acceptance
+            admin_notif_success, admin_notifications = self.test_get_notifications_admin()
+            admin_count_success, new_admin_count = self.test_unread_notifications_count_admin()
+            
+            if new_admin_count > initial_admin_count:
+                print(f"   ✅ Admin unread count increased: {initial_admin_count} → {new_admin_count}")
+            else:
+                print(f"   ⚠️  Admin unread count unchanged: {initial_admin_count} → {new_admin_count}")
+        
+        # Start and complete task
+        print("\n🚀 STEP 3: Starting task...")
         self.test_start_task()
         self.test_update_location()
-        self.test_complete_task()
-        self.test_get_technician_stats()
         
-        # Location and admin verification
+        print("\n🏁 STEP 4: Completing task...")
+        if self.test_complete_task():
+            print("   ✅ Task completed - notification should be sent to admin")
+            
+            # Check admin notifications after task completion
+            admin_notif_success, admin_notifications = self.test_get_notifications_admin()
+            admin_count_success, final_admin_count = self.test_unread_notifications_count_admin()
+            
+            if final_admin_count > new_admin_count:
+                print(f"   ✅ Admin unread count increased again: {new_admin_count} → {final_admin_count}")
+            else:
+                print(f"   ⚠️  Admin unread count unchanged: {new_admin_count} → {final_admin_count}")
+        
+        # Test marking notifications as read
+        print("\n📖 STEP 5: Testing mark notification as read...")
+        if tech_notif_success and tech_notifications:
+            self.test_mark_notification_read(tech_notifications)
+            
+            # Check count after marking as read
+            tech_count_success, after_read_count = self.test_unread_notifications_count_technician()
+            if after_read_count < new_tech_count:
+                print(f"   ✅ Technician unread count decreased: {new_tech_count} → {after_read_count}")
+            else:
+                print(f"   ⚠️  Technician unread count unchanged: {new_tech_count} → {after_read_count}")
+        
+        # Other tests
+        self.test_get_tasks_admin()
+        self.test_get_tasks_technician()
         self.test_get_task_locations()
-        
-        # Permission tests
+        self.test_get_admin_stats()
+        self.test_get_technician_stats()
         self.test_permission_restrictions()
         
         # Print final results
