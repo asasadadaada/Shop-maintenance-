@@ -117,6 +117,18 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm("هل أنت متأكد من حذف هذه المهمة؟")) {
+      try {
+        await axios.delete(`${API}/tasks/${taskId}`, getAuthHeaders());
+        toast.success("تم حذف المهمة بنجاح");
+        fetchData();
+      } catch (error) {
+        toast.error("فشل حذف المهمة");
+      }
+    }
+  };
+
   const showTasksByStatus = (status, title) => {
     let filteredTasks = [];
     if (status === "all") {
