@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { MapPin, CheckCircle, Clock, LogOut, Play, Bell, X } from "lucide-react";
+import { MapPin, CheckCircle, Clock, LogOut, Play, Bell, X, Settings as SettingsIcon } from "lucide-react";
 import { playNotificationSound } from "../utils/notificationSound";
+import Settings from "./Settings";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -21,6 +22,7 @@ const TechnicianDashboard = ({ user, onLogout }) => {
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [modalTasksType, setModalTasksType] = useState("");
   const [modalTasks, setModalTasks] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
 
   const getAuthHeaders = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
@@ -266,6 +268,16 @@ const TechnicianDashboard = ({ user, onLogout }) => {
             <p className="text-gray-600">مرحباً، {user.name}</p>
           </div>
           <div className="flex gap-3">
+            {/* Settings Button */}
+            <button 
+              onClick={() => setShowSettings(true)} 
+              className="secondary-button"
+              data-testid="settings-button"
+            >
+              <SettingsIcon className="inline ml-2" size={20} />
+              الإعدادات
+            </button>
+            
             {/* Notifications Button */}
             <button 
               onClick={() => setShowNotifications(!showNotifications)} 
@@ -594,6 +606,11 @@ const TechnicianDashboard = ({ user, onLogout }) => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings user={user} onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
