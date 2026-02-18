@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2, Play, UserPlus } from "lucide-react";
+import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2, Play, UserPlus, Settings as SettingsIcon } from "lucide-react";
 import { playNotificationSound } from "../utils/notificationSound";
 import LiveMap from "../components/LiveMap";
+import Settings from "./Settings";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -28,6 +29,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     email: "",
     password: ""
   });
+  const [showSettings, setShowSettings] = useState(false);
   const [newTask, setNewTask] = useState({
     customer_name: "",
     customer_phone: "",
@@ -202,6 +204,16 @@ const AdminDashboard = ({ user, onLogout }) => {
             <p className="text-gray-600">مرحباً، {user.name}</p>
           </div>
           <div className="flex gap-3">
+            {/* Settings Button */}
+            <button 
+              onClick={() => setShowSettings(true)} 
+              className="secondary-button"
+              data-testid="settings-button"
+            >
+              <SettingsIcon className="inline ml-2" size={20} />
+              الإعدادات
+            </button>
+            
             {/* Notifications Button */}
             <button 
               onClick={() => setShowNotifications(!showNotifications)} 
@@ -868,6 +880,11 @@ const AdminDashboard = ({ user, onLogout }) => {
             )}
           </div>
         </div>
+      )}
+      
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings user={user} onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
