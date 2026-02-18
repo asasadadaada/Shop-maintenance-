@@ -429,6 +429,64 @@ async def get_technician_latest_location(user_id: str, current_user: dict = Depe
     
     return location
 
+@api_router.post("/technicians", response_model=User)
+async def create_technician(user_data: UserCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="الصلاحية للمدير فقط")
+    
+    # Check if user exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً")
+    
+    # Create user (force role to technician)
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "name": user_data.name,
+        "email": user_data.email,
+        "password": hash_password(user_data.password),
+        "role": "technician",  # Force technician role
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user["id"]
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    user_response = User(
+        id=user_id,
+        name=user_data.name,
+        email=user_data.email,
+        role="technician",
+        created_at=user_doc["created_at"]
+    )
+    
+    return user_response
+
+@api_router.delete("/technicians/{technician_id}")
+async def delete_technician(technician_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="الصلاحية للمدير فقط")
+    
+    # Check if technician exists
+    tech = await db.users.find_one({"id": technician_id, "role": "technician"})
+    if not tech:
+        raise HTTPException(status_code=404, detail="الموظف غير موجود")
+    
+    # Don't allow deleting if technician has active tasks
+    active_tasks = await db.tasks.count_documents({
+        "assigned_to": technician_id,
+        "status": {"$in": ["pending", "accepted", "in_progress"]}
+    })
+    
+    if active_tasks > 0:
+        raise HTTPException(status_code=400, detail=f"لا يمكن حذف الموظف. لديه {active_tasks} مهمة نشطة")
+    
+    # Delete technician
+    await db.users.delete_one({"id": technician_id})
+    
+    return {"message": "تم حذف الموظف بنجاح"}
+
 # Technicians List
 @api_router.get("/technicians", response_model=List[User])
 async def get_technicians(current_user: dict = Depends(get_current_user)):
