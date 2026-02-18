@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { MapPin, CheckCircle, Clock, LogOut, Play, Bell, X } from "lucide-react";
+import { playNotificationSound } from "../utils/notificationSound";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -98,35 +99,19 @@ const TechnicianDashboard = ({ user, onLogout }) => {
       
       // Check for new notifications and play loud notification sound
       if (notifRes.data.length > notifications.length && notifications.length > 0) {
-        // Play notification sound
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-        
-        // Vibrate if supported
-        if (navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]);
-        }
+        // Play loud notification sound
+        playNotificationSound();
         
         // Show browser notification if permitted
         if (Notification.permission === "granted") {
-          new Notification("إشعار جديد", {
+          new Notification("إشعار جديد 🔔", {
             body: notifRes.data[0].message,
             icon: "/favicon.ico",
-            badge: "/favicon.ico"
+            badge: "/favicon.ico",
+            vibrate: [200, 100, 200]
           });
+        } else if (Notification.permission !== "denied") {
+          Notification.requestPermission();
         }
       }      
       setNotifications(notifRes.data);
