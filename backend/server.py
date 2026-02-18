@@ -77,10 +77,12 @@ class Task(BaseModel):
     created_by: str
     created_at: str
     accepted_at: Optional[str] = None
+    started_at: Optional[str] = None
     completed_at: Optional[str] = None
     report: Optional[str] = None
     report_images: Optional[List[str]] = None
     success: Optional[bool] = True  # True = completed successfully, False = failed
+    duration_minutes: Optional[int] = None
 
 class LocationUpdate(BaseModel):
     task_id: str
@@ -231,10 +233,12 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "accepted_at": None,
+        "started_at": None,
         "completed_at": None,
         "report": None,
         "report_images": None,
-        "success": True
+        "success": True,
+        "duration_minutes": None
     }
     
     await db.tasks.insert_one(task_doc)
@@ -270,6 +274,26 @@ async def get_task(task_id: str, current_user: dict = Depends(get_current_user))
         raise HTTPException(status_code=404, detail="المهمة غير موجودة")
     
     return Task(**task)
+
+@api_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="الصلاحية للمدير فقط")
+    
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+    
+    # Delete task
+    await db.tasks.delete_one({"id": task_id})
+    
+    # Delete related locations
+    await db.locations.delete_many({"task_id": task_id})
+    
+    # Delete related notifications
+    await db.notifications.delete_many({"task_id": task_id})
+    
+    return {"message": "تم حذف المهمة بنجاح"}
 
 @api_router.patch("/tasks/{task_id}/accept")
 async def accept_task(task_id: str, current_user: dict = Depends(get_current_user)):
@@ -314,9 +338,13 @@ async def start_task(task_id: str, current_user: dict = Depends(get_current_user
     if not task:
         raise HTTPException(status_code=404, detail="المهمة غير موجودة")
     
+    start_time = datetime.now(timezone.utc).isoformat()
     await db.tasks.update_one(
         {"id": task_id},
-        {"$set": {"status": "in_progress"}}
+        {"$set": {
+            "status": "in_progress",
+            "started_at": start_time
+        }}
     )
     
     return {"message": "تم بدء المهمة"}
@@ -330,31 +358,42 @@ async def complete_task(task_id: str, report_data: TaskReport, current_user: dic
     if not task:
         raise HTTPException(status_code=404, detail="المهمة غير موجودة")
     
+    completed_at = datetime.now(timezone.utc)
+    
+    # Calculate duration
+    duration_minutes = 0
+    if task.get("started_at"):
+        started_at = datetime.fromisoformat(task["started_at"].replace('Z', '+00:00'))
+        duration_minutes = int((completed_at - started_at).total_seconds() / 60)
+    
     await db.tasks.update_one(
         {"id": task_id},
         {"$set": {
             "status": "completed",
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": completed_at.isoformat(),
             "report": report_data.report_text,
             "report_images": report_data.images,
-            "success": report_data.success
+            "success": report_data.success,
+            "duration_minutes": duration_minutes
         }}
     )
     
-    # Create notification for admin
-    status_text = "بنجاح" if report_data.success else "كغير مكتملة"
+    # Create detailed notification for admin
+    status_text = "بنجاح ✓" if report_data.success else "كغير مكتملة ✗"
+    duration_text = f" - المدة: {duration_minutes} دقيقة" if duration_minutes > 0 else ""
+    
     notification_doc = {
         "id": str(uuid.uuid4()),
         "user_id": task["created_by"],
         "task_id": task_id,
-        "message": f"أنهى {current_user['name']} المهمة {status_text}: {task['customer_name']}",
+        "message": f"أنهى {current_user['name']} المهمة {status_text}: {task['customer_name']}{duration_text}",
         "type": "task_completed",
         "read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.notifications.insert_one(notification_doc)
     
-    return {"message": "تم إنهاء المهمة بنجاح"}
+    return {"message": "تم إنهاء المهمة بنجاح", "duration_minutes": duration_minutes}
 
 # Location Routes
 @api_router.post("/locations")
