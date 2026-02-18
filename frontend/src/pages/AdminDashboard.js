@@ -141,18 +141,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     setShowTasksModal(true);
   };
 
-  const handleDeleteTask = async (taskId) => {
-    if (window.confirm("هل أنت متأكد من حذف هذه المهمة؟")) {
-      try {
-        await axios.delete(`${API}/tasks/${taskId}`, getAuthHeaders());
-        toast.success("تم حذف المهمة بنجاح");
-        fetchData();
-      } catch (error) {
-        toast.error("فشل حذف المهمة");
-      }
-    }
-  };
-
   const getStatusText = (status) => {
     const statusMap = {
       pending: "قيد الانتظار",
