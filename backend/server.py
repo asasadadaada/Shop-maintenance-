@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -37,6 +37,32 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 security = HTTPBearer()
+
+# Default admin account
+DEFAULT_ADMIN = {
+    "email": "baqer@gmail.com",
+    "password": "198212",
+    "name": "المدير"
+}
+
+# Initialize default admin on startup
+@app.on_event("startup")
+async def create_default_admin():
+    # Check if admin exists
+    admin = await db.users.find_one({"email": DEFAULT_ADMIN["email"]})
+    if not admin:
+        # Create default admin
+        admin_id = str(uuid.uuid4())
+        admin_doc = {
+            "id": admin_id,
+            "name": DEFAULT_ADMIN["name"],
+            "email": DEFAULT_ADMIN["email"],
+            "password": hash_password(DEFAULT_ADMIN["password"]),
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(admin_doc)
+        print(f"✓ Default admin created: {DEFAULT_ADMIN['email']}")
 
 # Models
 class UserCreate(BaseModel):
