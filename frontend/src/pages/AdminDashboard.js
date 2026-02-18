@@ -316,7 +316,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       )}
 
       {/* Create Task Button */}
-      <div className="max-w-7xl mx-auto mb-6">
+      <div className="max-w-7xl mx-auto mb-6 flex gap-4">
         <button
           onClick={() => setShowCreateTask(true)}
           className="primary-button"
@@ -324,6 +324,24 @@ const AdminDashboard = ({ user, onLogout }) => {
         >
           <Plus className="inline ml-2" size={20} />
           إنشاء مهمة جديدة
+        </button>
+        
+        <button
+          onClick={() => setShowAddTechnician(true)}
+          className="success-button"
+          data-testid="add-technician-button"
+        >
+          <UserPlus className="inline ml-2" size={20} />
+          إضافة موظف جديد
+        </button>
+        
+        <button
+          onClick={() => setShowTechniciansModal(true)}
+          className="secondary-button"
+          data-testid="view-technicians-button"
+        >
+          <Users className="inline ml-2" size={20} />
+          إدارة الموظفين ({technicians.length})
         </button>
       </div>
 
