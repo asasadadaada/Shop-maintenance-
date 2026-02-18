@@ -460,38 +460,63 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </div>
               </div>
 
-              {task.status === "in_progress" && (
+              <div className="flex gap-3">
+                {task.status === "in_progress" && (
+                  <button
+                    onClick={() => viewTaskLocation(task)}
+                    className="secondary-button"
+                    data-testid={`view-location-button-${task.id}`}
+                  >
+                    <MapPin className="inline ml-2" size={18} />
+                    عرض الموقع
+                  </button>
+                )}
+                
                 <button
-                  onClick={() => viewTaskLocation(task)}
-                  className="secondary-button"
-                  data-testid={`view-location-button-${task.id}`}
+                  onClick={() => handleDeleteTask(task.id)}
+                  className="danger-button"
+                  data-testid={`delete-task-button-${task.id}`}
                 >
-                  <MapPin className="inline ml-2" size={18} />
-                  عرض الموقع
+                  <Trash2 className="inline ml-2" size={18} />
+                  حذف
                 </button>
-              )}
+              </div>
 
               {task.report && (
                 <div 
                   className={`mt-4 p-4 rounded-lg ${task.success !== false ? 'bg-green-50' : 'bg-red-50'}`}
                   data-testid={`task-report-${task.id}`}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    {task.success !== false ? (
-                      <>
-                        <CheckCircle size={20} className="text-green-600" />
-                        <h4 className="font-bold text-green-800">✓ المهمة تمت بنجاح</h4>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-red-600 text-xl">✗</span>
-                        <h4 className="font-bold text-red-800">✗ المهمة لم تكتمل</h4>
-                      </>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {task.success !== false ? (
+                        <>
+                          <CheckCircle size={24} className="text-green-600" />
+                          <h4 className="font-bold text-green-800 text-lg">✓ المهمة تمت بنجاح</h4>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-red-600 text-2xl">✗</span>
+                          <h4 className="font-bold text-red-800 text-lg">✗ المهمة لم تكتمل</h4>
+                        </>
+                      )}
+                    </div>
+                    {task.duration_minutes && (
+                      <div className="bg-white px-3 py-1 rounded-full">
+                        <p className="text-sm font-medium text-gray-700">
+                          ⏱️ المدة: {task.duration_minutes} دقيقة
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <p className={`${task.success !== false ? 'text-gray-700' : 'text-red-700'}`}>
+                  <p className={`${task.success !== false ? 'text-gray-700' : 'text-red-700'} mb-2`}>
                     {task.report}
                   </p>
+                  {task.completed_at && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      📅 تاريخ الإنهاء: {new Date(task.completed_at).toLocaleString('ar-IQ')}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
