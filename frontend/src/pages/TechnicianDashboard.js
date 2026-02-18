@@ -519,7 +519,59 @@ const TechnicianDashboard = ({ user, onLogout }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="report-modal">
           <div className="card max-w-2xl w-full">
             <h2 className="text-2xl font-bold mb-6" style={{ color: '#667eea' }}>تقرير إنهاء المهمة</h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Task Status Selection */}
+              <div>
+                <label className="label mb-3">حالة المهمة</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setTaskSuccess(true)}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      taskSuccess 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-300 bg-white hover:border-green-300'
+                    }`}
+                    data-testid="task-success-button"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        taskSuccess ? 'bg-green-500' : 'bg-gray-200'
+                      }`}>
+                        <CheckCircle size={28} className={taskSuccess ? 'text-white' : 'text-gray-400'} />
+                      </div>
+                      <span className={`font-bold ${taskSuccess ? 'text-green-700' : 'text-gray-600'}`}>
+                        تمت بنجاح ✓
+                      </span>
+                      <span className="text-xs text-gray-500">العطل تم إصلاحه بالكامل</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTaskSuccess(false)}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      !taskSuccess 
+                        ? 'border-red-500 bg-red-50' 
+                        : 'border-gray-300 bg-white hover:border-red-300'
+                    }`}
+                    data-testid="task-failed-button"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        !taskSuccess ? 'bg-red-500' : 'bg-gray-200'
+                      }`}>
+                        <span className={`text-2xl ${!taskSuccess ? 'text-white' : 'text-gray-400'}`}>✗</span>
+                      </div>
+                      <span className={`font-bold ${!taskSuccess ? 'text-red-700' : 'text-gray-600'}`}>
+                        لم تكتمل ✗
+                      </span>
+                      <span className="text-xs text-gray-500">لم يتم حل المشكلة</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="label">تفاصيل العمل المنجز</label>
                 <textarea
@@ -527,7 +579,10 @@ const TechnicianDashboard = ({ user, onLogout }) => {
                   rows="6"
                   value={report}
                   onChange={(e) => setReport(e.target.value)}
-                  placeholder="اكتب تفاصيل العمل المنجز، الأعطال التي تم إصلاحها، وأي ملاحظات أخرى..."
+                  placeholder={taskSuccess 
+                    ? "اكتب تفاصيل العمل المنجز، الأعطال التي تم إصلاحها، وأي ملاحظات أخرى..." 
+                    : "اكتب سبب عدم اكتمال المهمة، المشاكل التي واجهتها، والإجراءات المطلوبة..."
+                  }
                   data-testid="report-text-input"
                 />
               </div>
@@ -535,13 +590,16 @@ const TechnicianDashboard = ({ user, onLogout }) => {
               <div className="flex gap-4">
                 <button
                   onClick={handleCompleteTask}
-                  className="success-button flex-1"
+                  className={taskSuccess ? "success-button flex-1" : "danger-button flex-1"}
                   data-testid="submit-report-button"
                 >
-                  إرسال التقرير وإنهاء المهمة
+                  {taskSuccess ? "✓ إرسال التقرير - تمت بنجاح" : "✗ إرسال التقرير - لم تكتمل"}
                 </button>
                 <button
-                  onClick={() => setShowReportModal(false)}
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setTaskSuccess(true);
+                  }}
                   className="secondary-button flex-1"
                   data-testid="cancel-report-button"
                 >
