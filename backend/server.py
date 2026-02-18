@@ -181,37 +181,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Auth Routes
-@api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً")
-    
-    # Create user
-    user_id = str(uuid.uuid4())
-    user_doc = {
-        "id": user_id,
-        "name": user_data.name,
-        "email": user_data.email,
-        "password": hash_password(user_data.password),
-        "role": user_data.role,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.users.insert_one(user_doc)
-    
-    token = create_token(user_id, user_data.role)
-    user_response = User(
-        id=user_id,
-        name=user_data.name,
-        email=user_data.email,
-        role=user_data.role,
-        created_at=user_doc["created_at"]
-    )
-    
-    return TokenResponse(token=token, user=user_response)
-
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email})
@@ -232,6 +201,27 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me", response_model=User)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return User(**current_user)
+
+# Change Password
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+@api_router.post("/auth/change-password")
+async def change_password(password_data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    # Verify old password
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user or not verify_password(password_data.old_password, user["password"]):
+        raise HTTPException(status_code=400, detail="الرمز القديم غير صحيح")
+    
+    # Update password
+    new_hashed = hash_password(password_data.new_password)
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"password": new_hashed}}
+    )
+    
+    return {"message": "تم تغيير الرمز بنجاح"}
 
 # Task Routes
 @api_router.post("/tasks", response_model=Task)
