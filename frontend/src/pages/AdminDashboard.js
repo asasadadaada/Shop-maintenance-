@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X } from "lucide-react";
+import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2 } from "lucide-react";
+import { playNotificationSound } from "../utils/notificationSound";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -126,6 +127,18 @@ const AdminDashboard = ({ user, onLogout }) => {
     setModalTasks(filteredTasks);
     setModalTasksType(title);
     setShowTasksModal(true);
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm("هل أنت متأكد من حذف هذه المهمة؟")) {
+      try {
+        await axios.delete(`${API}/tasks/${taskId}`, getAuthHeaders());
+        toast.success("تم حذف المهمة بنجاح");
+        fetchData();
+      } catch (error) {
+        toast.error("فشل حذف المهمة");
+      }
+    }
   };
 
   const getStatusText = (status) => {
