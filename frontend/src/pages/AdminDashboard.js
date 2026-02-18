@@ -561,29 +561,57 @@ const AdminDashboard = ({ user, onLogout }) => {
               </div>
 
               <div>
-                <label className="label">تعيين لموظف *</label>
-                <select
-                  className="input-field"
-                  value={newTask.assigned_to}
-                  onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
-                  required
-                  data-testid="assigned-to-select"
-                >
-                  <option value="">-- اختر الموظف --</option>
+                <label className="label">اختر الموظف لإرسال المهمة له *</label>
+                
+                {/* Visual selection of technicians */}
+                <div className="grid grid-cols-1 gap-3 mb-3">
                   {technicians.map((tech) => (
-                    <option key={tech.id} value={tech.id}>
-                      {tech.name} ({tech.email})
-                    </option>
+                    <div
+                      key={tech.id}
+                      onClick={() => setNewTask({ ...newTask, assigned_to: tech.id })}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        newTask.assigned_to === tech.id
+                          ? 'border-purple-500 bg-purple-50 shadow-lg'
+                          : 'border-gray-200 bg-white hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                          newTask.assigned_to === tech.id
+                            ? 'bg-gradient-to-br from-purple-500 to-blue-500'
+                            : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                        }`}>
+                          {tech.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-bold ${newTask.assigned_to === tech.id ? 'text-purple-700' : 'text-gray-800'}`}>
+                            {tech.name}
+                          </p>
+                          <p className="text-sm text-gray-600">{tech.email}</p>
+                        </div>
+                        {newTask.assigned_to === tech.id && (
+                          <div className="text-purple-600">
+                            <CheckCircle size={24} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </select>
-                {technicians.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    ⚠️ لا يوجد موظفين! يرجى إضافة موظف أولاً
+                </div>
+                
+                {!newTask.assigned_to && (
+                  <p className="text-sm text-red-500 font-medium">
+                    ⚠️ يرجى اختيار موظف من القائمة أعلاه
                   </p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  * المهمة ستُرسل مباشرة للموظف المختار
-                </p>
+                
+                {newTask.assigned_to && (
+                  <div className="bg-green-50 border border-green-300 rounded-lg p-3">
+                    <p className="text-sm text-green-700 font-medium">
+                      ✓ سيتم إرسال المهمة إلى: {technicians.find(t => t.id === newTask.assigned_to)?.name}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4">
