@@ -22,20 +22,22 @@ load_dotenv(ROOT_DIR / '.env')
 # Telegram Bot Configuration
 TELEGRAM_BOT_TOKEN = "8224031678:AAG149d2LhnU1YYsNpcQeDMZO7eOIiPQR70"
 
-async def send_telegram_message(chat_id: str, message: str):
-    """إرسال رسالة Telegram مع زر"""
+async def send_telegram_message_with_button(chat_id: str, message: str, task_id: str):
+    """إرسال رسالة Telegram مع زر يروح مباشرة للمهمة"""
     if not chat_id:
         return
     
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         
-        # إنشاء زر يفتح التطبيق
+        # رابط التطبيق مع task_id
+        app_url = f"https://lemon-tanya-emergentagi-86e73b13.stage-preview.emergentagent.com/?task={task_id}"
+        
         keyboard = {
             "inline_keyboard": [[
                 {
-                    "text": "✅ فتح التطبيق وإكمال المهمة",
-                    "url": os.environ.get('REACT_APP_BACKEND_URL', 'https://lemon-tanya-emergentagi-86e73b13.stage-preview.emergentagent.com').replace('/api', '')
+                    "text": "✅ فتح المهمة وإكمالها",
+                    "url": app_url
                 }
             ]]
         }
@@ -46,6 +48,23 @@ async def send_telegram_message(chat_id: str, message: str):
                 "text": message,
                 "parse_mode": "HTML",
                 "reply_markup": keyboard
+            })
+    except Exception as e:
+        print(f"Telegram error: {e}")
+
+async def send_telegram_message(chat_id: str, message: str):
+    """إرسال رسالة Telegram بسيطة بدون زر"""
+    if not chat_id:
+        return
+    
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        
+        async with httpx.AsyncClient() as client:
+            await client.post(url, json={
+                "chat_id": chat_id,
+                "text": message,
+                "parse_mode": "HTML"
             })
     except Exception as e:
         print(f"Telegram error: {e}")
@@ -309,7 +328,7 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
         }
         await db.notifications.insert_one(notification_doc)
         
-        # إرسال رسالة Telegram
+        # إرسال رسالة Telegram مع رابط مباشر للمهمة
         if tech and tech.get("telegram_chat_id"):
             telegram_message = f"""
 🔔 <b>لديك مهمة جديدة!</b>
@@ -319,9 +338,14 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
 📍 <b>العنوان:</b> {task_data.customer_address}
 🔧 <b>العطل:</b> {task_data.issue_description}
 
-⏰ الرجاء فتح التطبيق للبدء بالمهمة
+⏰ <b>اضغط الزر أدناه لفتح المهمة مباشرة</b>
             """
-            await send_telegram_message(tech["telegram_chat_id"], telegram_message)
+            # إرسال الرسالة مع رابط المهمة المحددة
+            await send_telegram_message_with_button(
+                tech["telegram_chat_id"], 
+                telegram_message,
+                task_id
+            )
     
     return Task(**task_doc)
 
