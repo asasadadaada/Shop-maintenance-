@@ -46,6 +46,16 @@ const TechnicianDashboard = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchData();
+    
+    // طلب إذن الإشعارات عند تسجيل الدخول
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          toast.success("تم تفعيل الإشعارات - ستصلك إشعارات المهام على هاتفك");
+        }
+      });
+    }
+    
     // Check for new notifications every 5 seconds
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
@@ -101,20 +111,56 @@ const TechnicianDashboard = ({ user, onLogout }) => {
       
       // Check for new notifications and play loud notification sound
       if (notifRes.data.length > notifications.length && notifications.length > 0) {
+        const newNotif = notifRes.data[0];
+        
         // Play loud notification sound
         playNotificationSound();
         
-        // Show browser notification if permitted
+        // Show browser notification with enhanced options
         if (Notification.permission === "granted") {
-          new Notification("إشعار جديد 🔔", {
-            body: notifRes.data[0].message,
+          const notification = new Notification("📢 لديك مهمة جديدة!", {
+            body: newNotif.message,
             icon: "/favicon.ico",
             badge: "/favicon.ico",
-            vibrate: [200, 100, 200]
+            vibrate: [200, 100, 200, 100, 200],
+            tag: newNotif.id,
+            requireInteraction: true, // Keep notification until user interacts
+            silent: false
           });
-        } else if (Notification.permission !== "denied") {
-          Notification.requestPermission();
+          
+          // Click to open app
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+        } else if (Notification.permission === "default") {
+          // Request permission if not granted
+          Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+              new Notification("📢 لديك مهمة جديدة!", {
+                body: newNotif.message,
+                icon: "/favicon.ico",
+                vibrate: [200, 100, 200],
+                requireInteraction: true
+              });
+            }
+          });
         }
+        
+        // Show toast notification
+        toast.info("📢 لديك مهمة جديدة!", {
+          description: newNotif.message,
+          duration: 10000,
+          action: {
+            label: "عرض",
+            onClick: () => {
+              const taskElement = document.querySelector(`[data-testid="task-card-${newNotif.task_id}"]`);
+              if (taskElement) {
+                taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+          }
+        });
       }      
       setNotifications(notifRes.data);
       setUnreadCount(unreadRes.data.count);
