@@ -14,8 +14,29 @@ import jwt
 from passlib.context import CryptContext
 import base64
 
+import httpx
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN = "8224031678:AAG149d2LhnU1YYsNpcQeDMZO7eOIiPQR70"
+
+async def send_telegram_message(chat_id: str, message: str):
+    """إرسال رسالة Telegram بسيطة"""
+    if not chat_id:
+        return
+    
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        async with httpx.AsyncClient() as client:
+            await client.post(url, json={
+                "chat_id": chat_id,
+                "text": message,
+                "parse_mode": "HTML"
+            })
+    except Exception as e:
+        print(f"Telegram error: {e}")
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -71,6 +92,7 @@ class UserCreate(BaseModel):
     password: str
     role: str = "technician"  # admin or technician
     whatsapp_number: Optional[str] = None  # رقم الواتساب
+    telegram_chat_id: Optional[str] = None  # Telegram Chat ID
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -84,6 +106,7 @@ class User(BaseModel):
     role: str
     created_at: str
     whatsapp_number: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
 
 class TaskCreate(BaseModel):
     customer_name: str
@@ -273,6 +296,20 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification_doc)
+        
+        # إرسال رسالة Telegram
+        if tech and tech.get("telegram_chat_id"):
+            telegram_message = f"""
+🔔 <b>لديك مهمة جديدة!</b>
+
+👤 <b>المشترك:</b> {task_data.customer_name}
+📞 <b>الهاتف:</b> {task_data.customer_phone}
+📍 <b>العنوان:</b> {task_data.customer_address}
+🔧 <b>العطل:</b> {task_data.issue_description}
+
+⏰ الرجاء فتح التطبيق للبدء بالمهمة
+            """
+            await send_telegram_message(tech["telegram_chat_id"], telegram_message)
     
     return Task(**task_doc)
 
@@ -466,6 +503,7 @@ async def create_technician(user_data: UserCreate, current_user: dict = Depends(
         "password": hash_password(user_data.password),
         "role": "technician",  # Force technician role
         "whatsapp_number": user_data.whatsapp_number,
+        "telegram_chat_id": user_data.telegram_chat_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user["id"]
     }
@@ -478,6 +516,7 @@ async def create_technician(user_data: UserCreate, current_user: dict = Depends(
         email=user_data.email,
         role="technician",
         whatsapp_number=user_data.whatsapp_number,
+        telegram_chat_id=user_data.telegram_chat_id,
         created_at=user_doc["created_at"]
     )
     
