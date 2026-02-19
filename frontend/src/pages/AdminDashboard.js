@@ -88,7 +88,16 @@ const AdminDashboard = ({ user, onLogout }) => {
     try {
       await axios.post(`${API}/tasks`, newTask, getAuthHeaders());
       const assignedTech = technicians.find(t => t.id === newTask.assigned_to);
-      toast.success(`✓ تم إنشاء المهمة وإرسالها إلى ${assignedTech?.name || 'الموظف'}`);
+      
+      // Success message with notification info
+      toast.success(
+        `✓ تم إنشاء المهمة بنجاح`,
+        {
+          description: `تم إرسال إشعار إلى ${assignedTech?.name || 'الموظف'} على هاتفه`,
+          duration: 5000
+        }
+      );
+      
       setShowCreateTask(false);
       setNewTask({
         customer_name: "",
