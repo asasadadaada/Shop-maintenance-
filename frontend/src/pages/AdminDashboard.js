@@ -27,9 +27,13 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [newTechnician, setNewTechnician] = useState({
     name: "",
     email: "",
-    password: ""
+    password: "",
+    whatsapp_number: ""
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [pendingTaskData, setPendingTaskData] = useState(null);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [newTask, setNewTask] = useState({
     customer_name: "",
     customer_phone: "",
@@ -86,19 +90,37 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
     
     try {
+      // إنشاء المهمة
       await axios.post(`${API}/tasks`, newTask, getAuthHeaders());
       const assignedTech = technicians.find(t => t.id === newTask.assigned_to);
       
-      // Success message with notification info
+      // Success message
       toast.success(
         `✓ تم إنشاء المهمة بنجاح`,
         {
-          description: `تم إرسال إشعار إلى ${assignedTech?.name || 'الموظف'} على هاتفه`,
+          description: `تم تعيين المهمة إلى ${assignedTech?.name || 'الموظف'}`,
           duration: 5000
         }
       );
       
       setShowCreateTask(false);
+      
+      // إرسال رسالة واتساب
+      if (assignedTech?.whatsapp_number) {
+        // الموظف عنده رقم واتساب - إرسال مباشر
+        sendWhatsAppMessage(assignedTech.whatsapp_number, assignedTech.name);
+      } else {
+        // الموظف ما عنده رقم - طلب الرقم
+        setPendingTaskData({
+          technicianId: assignedTech.id,
+          technicianName: assignedTech.name,
+          customerName: newTask.customer_name,
+          address: newTask.customer_address
+        });
+        setShowWhatsAppModal(true);
+      }
+      
+      // إعادة تعيين النموذج
       setNewTask({
         customer_name: "",
         customer_phone: "",
@@ -106,9 +128,68 @@ const AdminDashboard = ({ user, onLogout }) => {
         issue_description: "",
         assigned_to: ""
       });
+      
       fetchData();
     } catch (error) {
       toast.error("فشل إنشاء المهمة");
+    }
+  };
+  
+  const sendWhatsAppMessage = (phoneNumber, techName) => {
+    // تنظيف رقم الهاتف
+    let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    
+    // إضافة 964 إذا بدأ بـ 07
+    if (cleanNumber.startsWith('07')) {
+      cleanNumber = '964' + cleanNumber.substring(1);
+    }
+    
+    // الرسالة الجاهزة
+    const message = `🔔 *لديك مهمة جديدة!*
+
+👤 *المشترك:* ${pendingTaskData?.customerName || newTask.customer_name}
+📍 *العنوان:* ${pendingTaskData?.address || newTask.customer_address}
+⏰ *الوقت:* ${new Date().toLocaleString('ar-IQ')}
+
+يرجى فتح التطبيق لعرض تفاصيل المهمة والبدء بالعمل.
+
+_نظام إدارة الصيانة_`;
+
+    // فتح واتساب
+    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    
+    toast.success("تم فتح واتساب - أرسل الرسالة الآن 📱");
+  };
+  
+  const handleSaveWhatsAppNumber = async () => {
+    if (!whatsappNumber) {
+      toast.error("يرجى إدخال رقم الواتساب");
+      return;
+    }
+    
+    try {
+      // تحديث رقم الموظف في قاعدة البيانات
+      await axios.patch(
+        `${API}/technicians/${pendingTaskData.technicianId}/whatsapp`,
+        { whatsapp_number: whatsappNumber },
+        getAuthHeaders()
+      );
+      
+      toast.success("تم حفظ الرقم بنجاح");
+      
+      // إرسال الرسالة
+      sendWhatsAppMessage(whatsappNumber, pendingTaskData.technicianName);
+      
+      // إغلاق Modal
+      setShowWhatsAppModal(false);
+      setWhatsappNumber("");
+      setPendingTaskData(null);
+      
+      // تحديث البيانات
+      fetchData();
+    } catch (error) {
+      toast.error("فشل حفظ الرقم");
     }
   };
 
@@ -162,7 +243,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       await axios.post(`${API}/technicians`, newTechnician, getAuthHeaders());
       toast.success("تم إضافة الموظف بنجاح");
       setShowAddTechnician(false);
-      setNewTechnician({ name: "", email: "", password: "" });
+      setNewTechnician({ name: "", email: "", password: "", whatsapp_number: "" });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "فشل إضافة الموظف");
@@ -405,16 +486,17 @@ const AdminDashboard = ({ user, onLogout }) => {
               </div>
 
               <div>
-                <label className="label">كلمة المرور</label>
+                <label className="label">رقم الواتساب (اختياري)</label>
                 <input
-                  type="text"
+                  type="tel"
                   className="input-field"
-                  value={newTechnician.password}
-                  onChange={(e) => setNewTechnician({ ...newTechnician, password: e.target.value })}
-                  required
-                  placeholder="اكتب كلمة مرور قوية"
+                  value={newTechnician.whatsapp_number || ""}
+                  onChange={(e) => setNewTechnician({ ...newTechnician, whatsapp_number: e.target.value })}
+                  placeholder="964XXXXXXXXXX أو 07XXXXXXXXX"
                 />
-                <p className="text-xs text-gray-500 mt-1">⚠️ احفظ كلمة المرور وأرسلها للموظف</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  📱 سيتم إرسال إشعارات المهام على هذا الرقم
+                </p>
               </div>
 
               <div className="bg-blue-50 p-3 rounded-lg">
