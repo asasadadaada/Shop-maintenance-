@@ -70,6 +70,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     role: str = "technician"  # admin or technician
+    whatsapp_number: Optional[str] = None  # رقم الواتساب
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -82,6 +83,7 @@ class User(BaseModel):
     email: EmailStr
     role: str
     created_at: str
+    whatsapp_number: Optional[str] = None
 
 class TaskCreate(BaseModel):
     customer_name: str
@@ -463,6 +465,7 @@ async def create_technician(user_data: UserCreate, current_user: dict = Depends(
         "email": user_data.email,
         "password": hash_password(user_data.password),
         "role": "technician",  # Force technician role
+        "whatsapp_number": user_data.whatsapp_number,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user["id"]
     }
@@ -474,6 +477,7 @@ async def create_technician(user_data: UserCreate, current_user: dict = Depends(
         name=user_data.name,
         email=user_data.email,
         role="technician",
+        whatsapp_number=user_data.whatsapp_number,
         created_at=user_doc["created_at"]
     )
     
