@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2, Play, UserPlus, Settings as SettingsIcon } from "lucide-react";
+import { MapPin, Users, CheckCircle, Clock, AlertCircle, Plus, LogOut, Bell, X, Trash2, Play, UserPlus, Settings as SettingsIcon, Send, Star } from "lucide-react";
 import { playNotificationSound } from "../utils/notificationSound";
 import LiveMap from "../components/LiveMap";
 import Settings from "./Settings";
@@ -34,6 +34,15 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [pendingTaskData, setPendingTaskData] = useState(null);
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [selectedTechnicians, setSelectedTechnicians] = useState([]);
+  const [showRatingsModal, setShowRatingsModal] = useState(false);
+  const [selectedTechForRating, setSelectedTechForRating] = useState(null);
+  const [techRatings, setTechRatings] = useState(null);
+  const [ratingTask, setRatingTask] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
   const [newTask, setNewTask] = useState({
     customer_name: "",
     customer_phone: "",
@@ -261,6 +270,78 @@ _نظام إدارة الصيانة_`;
       }
     }
   };
+  
+  const handleSendBroadcast = async () => {
+    if (!broadcastMessage.trim()) {
+      toast.error("يرجى كتابة الرسالة");
+      return;
+    }
+    
+    if (selectedTechnicians.length === 0) {
+      toast.error("يرجى اختيار موظف واحد على الأقل");
+      return;
+    }
+    
+    try {
+      const response = await axios.post(
+        `${API}/broadcast-message`,
+        {
+          message: broadcastMessage,
+          technician_ids: selectedTechnicians
+        },
+        getAuthHeaders()
+      );
+      
+      toast.success(`✓ تم إرسال الرسالة إلى ${response.data.sent} موظف`);
+      setShowBroadcastModal(false);
+      setBroadcastMessage("");
+      setSelectedTechnicians([]);
+    } catch (error) {
+      toast.error("فشل إرسال الرسالة");
+    }
+  };
+  
+  const viewTechnicianRatings = async (tech) => {
+    try {
+      const response = await axios.get(`${API}/technicians/${tech.id}/ratings`, getAuthHeaders());
+      setTechRatings(response.data);
+      setSelectedTechForRating(tech);
+      setShowRatingsModal(true);
+    } catch (error) {
+      toast.error("فشل جلب التقييمات");
+    }
+  };
+  
+  const handleAddRating = async () => {
+    if (!ratingValue) {
+      toast.error("يرجى اختيار التقييم");
+      return;
+    }
+    
+    try {
+      await axios.post(
+        `${API}/tasks/${ratingTask}/rate`,
+        {
+          rating: ratingValue,
+          comment: ratingComment
+        },
+        getAuthHeaders()
+      );
+      
+      toast.success("✓ تم إضافة التقييم");
+      setRatingTask(null);
+      setRatingValue(5);
+      setRatingComment("");
+      fetchData();
+      
+      // Refresh ratings if modal is open
+      if (selectedTechForRating) {
+        viewTechnicianRatings(selectedTechForRating);
+      }
+    } catch (error) {
+      toast.error("فشل إضافة التقييم");
+    }
+  };
 
   const showTasksByStatus = (status, title) => {
     let filteredTasks = [];
@@ -452,6 +533,16 @@ _نظام إدارة الصيانة_`;
         >
           <Users className="inline ml-2" size={20} />
           إدارة الموظفين ({technicians.length})
+        </button>
+        
+        <button
+          onClick={() => setShowBroadcastModal(true)}
+          className="card px-4 py-2 flex items-center gap-2 hover:shadow-lg transition-all"
+          style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white' }}
+          data-testid="broadcast-button"
+        >
+          <Send className="inline" size={20} />
+          إرسال رسالة
         </button>
       </div>
 
@@ -997,6 +1088,106 @@ _نظام إدارة الصيانة_`;
         </div>
       )}
       
+      {/* Broadcast Message Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card max-w-2xl w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold" style={{ color: '#667eea' }}>
+                <Send className="inline ml-2" size={28} />
+                إرسال رسالة للموظفين
+              </h2>
+              <button onClick={() => setShowBroadcastModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="label">نص الرسالة</label>
+                <textarea
+                  className="input-field"
+                  rows="5"
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  placeholder="اكتب رسالتك هنا... (ستصل عبر Telegram)"
+                  data-testid="broadcast-message-input"
+                />
+              </div>
+              
+              <div>
+                <label className="label mb-3">اختر الموظفين</label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {technicians.map((tech) => (
+                    <div
+                      key={tech.id}
+                      onClick={() => {
+                        if (selectedTechnicians.includes(tech.id)) {
+                          setSelectedTechnicians(selectedTechnicians.filter(id => id !== tech.id));
+                        } else {
+                          setSelectedTechnicians([...selectedTechnicians, tech.id]);
+                        }
+                      }}
+                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedTechnicians.includes(tech.id)
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 bg-white hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                          selectedTechnicians.includes(tech.id)
+                            ? 'bg-gradient-to-br from-purple-500 to-blue-500'
+                            : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                        }`}>
+                          {tech.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-800">{tech.name}</p>
+                          <p className="text-xs text-gray-600">{tech.email}</p>
+                        </div>
+                        {selectedTechnicians.includes(tech.id) && (
+                          <CheckCircle size={24} className="text-purple-600" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {selectedTechnicians.length > 0 && (
+                  <div className="mt-3 bg-green-50 border border-green-300 rounded-lg p-3">
+                    <p className="text-sm text-green-700 font-medium">
+                      ✓ تم اختيار {selectedTechnicians.length} موظف
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-4">
+                <button
+                  onClick={handleSendBroadcast}
+                  className="success-button flex-1"
+                  data-testid="send-broadcast-button"
+                >
+                  <Send className="inline ml-2" size={18} />
+                  إرسال الرسالة
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBroadcastModal(false);
+                    setBroadcastMessage("");
+                    setSelectedTechnicians([]);
+                  }}
+                  className="secondary-button flex-1"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings Modal */}
       {showSettings && (
         <Settings user={user} onClose={() => setShowSettings(false)} />

@@ -169,10 +169,19 @@ const LiveMap = ({ locations = [], technicianName = "الموظف" }) => {
         ref={mapRef}
         zoomControl={true}
       >
+        {/* طبقة القمر الصناعي من Google */}
         <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
+          attribution='&copy; Google Maps'
+          url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+          maxZoom={20}
+        />
+        
+        {/* طبقة أسماء الشوارع والمباني */}
+        <TileLayer
+          attribution='&copy; Google Maps'
+          url="https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}"
+          maxZoom={20}
+          opacity={0.8}
         />
         
         <MapUpdater center={center} prevCenter={prevCenter} />

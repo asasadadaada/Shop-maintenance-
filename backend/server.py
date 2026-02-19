@@ -31,7 +31,7 @@ async def send_telegram_message_with_button(chat_id: str, message: str, task_id:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         
         # رابط التطبيق مع task_id
-        app_url = f"https://lemon-tanya-emergentagi-86e73b13.stage-preview.emergentagent.com/?task={task_id}"
+        app_url = f"https://tech-dispatch-37.preview.emergentagent.com/?task={task_id}"
         
         keyboard = {
             "inline_keyboard": [[
@@ -165,6 +165,8 @@ class Task(BaseModel):
     report_images: Optional[List[str]] = None
     success: Optional[bool] = True  # True = completed successfully, False = failed
     duration_minutes: Optional[int] = None
+    rating: Optional[int] = None  # 1-5 تقييم من الزبون
+    rating_comment: Optional[str] = None  # تعليق الزبون
 
 class LocationUpdate(BaseModel):
     task_id: str
@@ -310,7 +312,9 @@ async def create_task(task_data: TaskCreate, current_user: dict = Depends(get_cu
         "report": None,
         "report_images": None,
         "success": True,
-        "duration_minutes": None
+        "duration_minutes": None,
+        "rating": None,
+        "rating_comment": None
     }
     
     await db.tasks.insert_one(task_doc)
@@ -591,6 +595,76 @@ async def get_technicians(current_user: dict = Depends(get_current_user)):
     technicians = await db.users.find({"role": "technician"}, {"_id": 0, "password": 0}).to_list(1000)
     return technicians
 
+@api_router.post("/tasks/{task_id}/rate")
+async def rate_task(
+    task_id: str,
+    rating_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """تقييم المهمة من قبل المدير (بعد الاتصال بالزبون)"""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="الصلاحية للمدير فقط")
+    
+    rating = rating_data.get("rating")
+    comment = rating_data.get("comment", "")
+    
+    if not rating or rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="التقييم يجب أن يكون من 1 إلى 5")
+    
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+    
+    if task["status"] != "completed":
+        raise HTTPException(status_code=400, detail="لا يمكن تقييم مهمة غير مكتملة")
+    
+    await db.tasks.update_one(
+        {"id": task_id},
+        {"$set": {
+            "rating": rating,
+            "rating_comment": comment
+        }}
+    )
+    
+    return {"message": "تم إضافة التقييم بنجاح"}
+
+# Get technician ratings
+@api_router.get("/technicians/{technician_id}/ratings")
+async def get_technician_ratings(
+    technician_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """الحصول على تقييمات موظف محدد"""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="الصلاحية للمدير فقط")
+    
+    # Get all completed tasks with ratings
+    tasks = await db.tasks.find(
+        {
+            "assigned_to": technician_id,
+            "status": "completed",
+            "rating": {"$ne": None}
+        },
+        {"_id": 0}
+    ).sort("completed_at", -1).to_list(100)
+    
+    if not tasks:
+        return {
+            "average_rating": 0,
+            "total_ratings": 0,
+            "tasks": []
+        }
+    
+    # Calculate average
+    total = sum(task["rating"] for task in tasks)
+    average = round(total / len(tasks), 1)
+    
+    return {
+        "average_rating": average,
+        "total_ratings": len(tasks),
+        "tasks": tasks
+    }
+
 # Notifications Routes
 @api_router.get("/notifications", response_model=List[Notification])
 async def get_notifications(current_user: dict = Depends(get_current_user)):
@@ -614,6 +688,51 @@ async def get_unread_count(current_user: dict = Depends(get_current_user)):
         {"user_id": current_user["id"], "read": False}
     )
     return {"count": count}
+
+@api_router.post("/broadcast-message")
+async def broadcast_message(
+    message_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """إرسال رسالة جماعية للموظفين"""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="الصلاحية للمدير فقط")
+    
+    message_text = message_data.get("message")
+    technician_ids = message_data.get("technician_ids", [])
+    
+    if not message_text:
+        raise HTTPException(status_code=400, detail="يرجى كتابة الرسالة")
+    
+    if not technician_ids:
+        raise HTTPException(status_code=400, detail="يرجى اختيار موظف واحد على الأقل")
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for tech_id in technician_ids:
+        tech = await db.users.find_one({"id": tech_id, "role": "technician"}, {"_id": 0})
+        if tech and tech.get("telegram_chat_id"):
+            try:
+                formatted_message = f"""
+📢 <b>رسالة من الإدارة</b>
+
+{message_text}
+
+<i>من: {current_user['name']}</i>
+                """
+                await send_telegram_message(tech["telegram_chat_id"], formatted_message)
+                sent_count += 1
+            except:
+                failed_count += 1
+        else:
+            failed_count += 1
+    
+    return {
+        "message": "تم إرسال الرسائل",
+        "sent": sent_count,
+        "failed": failed_count
+    }
 
 # Statistics
 @api_router.get("/stats")
