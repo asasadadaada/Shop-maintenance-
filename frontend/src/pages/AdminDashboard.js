@@ -28,7 +28,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     name: "",
     email: "",
     password: "",
-    whatsapp_number: ""
+    telegram_chat_id: ""
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -243,7 +243,7 @@ _نظام إدارة الصيانة_`;
       await axios.post(`${API}/technicians`, newTechnician, getAuthHeaders());
       toast.success("تم إضافة الموظف بنجاح");
       setShowAddTechnician(false);
-      setNewTechnician({ name: "", email: "", password: "", whatsapp_number: "" });
+      setNewTechnician({ name: "", email: "", password: "", telegram_chat_id: "" });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "فشل إضافة الموظف");
@@ -486,23 +486,47 @@ _نظام إدارة الصيانة_`;
               </div>
 
               <div>
-                <label className="label">رقم الواتساب (اختياري)</label>
+                <label className="label">كلمة المرور</label>
                 <input
-                  type="tel"
+                  type="text"
                   className="input-field"
-                  value={newTechnician.whatsapp_number || ""}
-                  onChange={(e) => setNewTechnician({ ...newTechnician, whatsapp_number: e.target.value })}
-                  placeholder="964XXXXXXXXXX أو 07XXXXXXXXX"
+                  value={newTechnician.password}
+                  onChange={(e) => setNewTechnician({ ...newTechnician, password: e.target.value })}
+                  required
+                  placeholder="اكتب كلمة مرور قوية"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  📱 سيتم إرسال إشعارات المهام على هذا الرقم
-                </p>
+                <p className="text-xs text-gray-500 mt-1">⚠️ احفظ كلمة المرور وأرسلها للموظف</p>
+              </div>
+
+              <div>
+                <label className="label">Telegram Chat ID</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={newTechnician.telegram_chat_id || ""}
+                  onChange={(e) => setNewTechnician({ ...newTechnician, telegram_chat_id: e.target.value })}
+                  placeholder="مثال: 123456789"
+                  required
+                />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                  <p className="text-xs text-blue-800 font-bold mb-2">📱 كيفية الحصول على Chat ID:</p>
+                  <ol className="text-xs text-blue-700 space-y-1 mr-4">
+                    <li>1. افتح Telegram وابحث عن: <strong>@userinfobot</strong></li>
+                    <li>2. اضغط Start</li>
+                    <li>3. سيرسل لك Chat ID الخاص بك</li>
+                    <li>4. انسخ الرقم وضعه هنا</li>
+                  </ol>
+                  <p className="text-xs text-blue-600 mt-2">
+                    💡 ستصل رسالة تلقائية على Telegram عند كل مهمة جديدة
+                  </p>
+                </div>
               </div>
 
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-sm text-blue-800 font-medium">📋 بيانات الدخول:</p>
                 <p className="text-xs text-blue-600 mt-1">اليوزر: {newTechnician.email || "..."}</p>
                 <p className="text-xs text-blue-600">الباسورد: {newTechnician.password || "..."}</p>
+                <p className="text-xs text-blue-600">Chat ID: {newTechnician.telegram_chat_id || "..."}</p>
               </div>
 
               <div className="flex gap-4">

@@ -23,17 +23,29 @@ load_dotenv(ROOT_DIR / '.env')
 TELEGRAM_BOT_TOKEN = "8224031678:AAG149d2LhnU1YYsNpcQeDMZO7eOIiPQR70"
 
 async def send_telegram_message(chat_id: str, message: str):
-    """إرسال رسالة Telegram بسيطة"""
+    """إرسال رسالة Telegram مع زر"""
     if not chat_id:
         return
     
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        
+        # إنشاء زر يفتح التطبيق
+        keyboard = {
+            "inline_keyboard": [[
+                {
+                    "text": "✅ فتح التطبيق وإكمال المهمة",
+                    "url": os.environ.get('REACT_APP_BACKEND_URL', 'https://lemon-tanya-emergentagi-86e73b13.stage-preview.emergentagent.com').replace('/api', '')
+                }
+            ]]
+        }
+        
         async with httpx.AsyncClient() as client:
             await client.post(url, json={
                 "chat_id": chat_id,
                 "text": message,
-                "parse_mode": "HTML"
+                "parse_mode": "HTML",
+                "reply_markup": keyboard
             })
     except Exception as e:
         print(f"Telegram error: {e}")

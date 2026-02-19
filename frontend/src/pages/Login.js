@@ -74,15 +74,6 @@ const Login = ({ onLogin }) => {
             {loading ? "جاري الدخول..." : "تسجيل الدخول"}
           </button>
         </form>
-
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800 text-center">
-            💡 <strong>للمدير:</strong> baqer@gmail.com
-          </p>
-          <p className="text-xs text-blue-600 text-center mt-1">
-            يمكنك تغيير الرمز من الإعدادات بعد الدخول
-          </p>
-        </div>
       </div>
     </div>
   );
