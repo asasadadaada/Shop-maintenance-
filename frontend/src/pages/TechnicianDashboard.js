@@ -47,12 +47,15 @@ const TechnicianDashboard = ({ user, onLogout }) => {
   useEffect(() => {
     fetchData();
     
-    // طلب إذن الإشعارات عند تسجيل الدخول
-    if (Notification.permission === "default") {
+    // طلب إذن الإشعارات عند تسجيل الدخول (مع التحقق)
+    if (typeof Notification !== 'undefined' && Notification.permission === "default") {
       Notification.requestPermission().then(permission => {
         if (permission === "granted") {
-          toast.success("تم تفعيل الإشعارات - ستصلك إشعارات المهام على هاتفك");
+          toast.success("تم تفعيل الإشعارات - ستصلك إشعارات المهام");
         }
+      }).catch(() => {
+        // المتصفح لا يدعم الإشعارات
+        console.log("Browser does not support notifications");
       });
     }
     
@@ -116,38 +119,48 @@ const TechnicianDashboard = ({ user, onLogout }) => {
         // Play loud notification sound
         playNotificationSound();
         
-        // Show browser notification with enhanced options
-        if (Notification.permission === "granted") {
-          const notification = new Notification("📢 لديك مهمة جديدة!", {
-            body: newNotif.message,
-            icon: "/favicon.ico",
-            badge: "/favicon.ico",
-            vibrate: [200, 100, 200, 100, 200],
-            tag: newNotif.id,
-            requireInteraction: true, // Keep notification until user interacts
-            silent: false
-          });
-          
-          // Click to open app
-          notification.onclick = () => {
-            window.focus();
-            notification.close();
-          };
-        } else if (Notification.permission === "default") {
+        // Show browser notification (مع التحقق من الدعم)
+        if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+          try {
+            const notification = new Notification("📢 لديك مهمة جديدة!", {
+              body: newNotif.message,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              vibrate: [200, 100, 200, 100, 200],
+              tag: newNotif.id,
+              requireInteraction: true,
+              silent: false
+            });
+            
+            // Click to open app
+            notification.onclick = () => {
+              window.focus();
+              notification.close();
+            };
+          } catch (error) {
+            console.log("Notification error:", error);
+          }
+        } else if (typeof Notification !== 'undefined' && Notification.permission === "default") {
           // Request permission if not granted
           Notification.requestPermission().then(permission => {
             if (permission === "granted") {
-              new Notification("📢 لديك مهمة جديدة!", {
-                body: newNotif.message,
-                icon: "/favicon.ico",
-                vibrate: [200, 100, 200],
-                requireInteraction: true
-              });
+              try {
+                new Notification("📢 لديك مهمة جديدة!", {
+                  body: newNotif.message,
+                  icon: "/favicon.ico",
+                  vibrate: [200, 100, 200],
+                  requireInteraction: true
+                });
+              } catch (error) {
+                console.log("Notification error:", error);
+              }
             }
+          }).catch(() => {
+            console.log("Notification permission denied");
           });
         }
         
-        // Show toast notification
+        // Show toast notification (هذا يعمل دائماً)
         toast.info("📢 لديك مهمة جديدة!", {
           description: newNotif.message,
           duration: 10000,
